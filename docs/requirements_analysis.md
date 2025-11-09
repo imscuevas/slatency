@@ -1,0 +1,25 @@
+# Requirements analysis
+- [x] The user should be able to send a stream of requests to any HTTP(S) endpoint
+- [x] Each request response must be written to a file
+- [x] The requests should be written in a standard format including information if they failed
+- [x] Every successful request should include DNS resolution time, TCP establishment time, TLS handshake time, time to first byte sent, time to last byte sent, time to first byte received, time to last byte received and the total time from beggining to the end
+- [x] The number of requests must be configurable by the customer
+- [x] The file should be read by the analysis module so it can generate the latency report
+- [x] The report must include for every set of requests the statistical analysis for P50, P95, P99, minimum and maximum latency
+- [x] There should be an option to graph all the requests latency
+- [x] There should be an option to graph the bar for average compared to the min and max
+- [x] There should be an option to run it from the command line
+- [x] There should be an option to run it graphically
+- [x] You should be able to define the type of method
+- [x] You should be able to define the headers
+- [x] For the sake of previous knowledge libcurl and pandas should be used for the analysis
+- [x] I would like to have autocompletion for the command line tool
+- [x] I would like to have help in the command line
+- [x] I would like to have a manual page with the usage example
+- [x] It should be hosted on github in a public repository
+- [x] The user should be able to provide a filename for future reference
+- [x] The output file should be json or csv
+- [x] The timeout should be configurable by the user
+- [x] The system should be able to help us to measure the error rate
+- [x] The system should provide error distribution per phase in the report
+- [x] For POST requests I should be able to provide data from a file or the command line
