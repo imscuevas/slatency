@@ -17,26 +17,59 @@ A `Request` represents an HTTP request to be sent to a target service.
 
 ### Response
 
-A `Response` represents the HTTP response received from the target service.
+A `Response` represents the outcome of an HTTP request, which can be either a success or a failure.
 
 - **Attributes:**
-    - `status_code`: The HTTP status code.
-    - `headers`: A dictionary of HTTP headers.
-    - `body`: The response payload.
-    - `latency`: The time taken to receive the response after the request was sent (in milliseconds).
-    - `timestamp`: The time at which the response was received.
+    - **For successful responses:**
+        - `status_code`: The HTTP status code.
+        - `latency`: A `Latency` object containing detailed timing information.
+        - `flow`: A `Flow` object containing network flow information.
+    - **For failed responses:**
+        - `failure_phase`: The stage at which the request failed (e.g., DNS, TCP Connection, TLS Handshake, Request, Response).
+        - `error_message`: A message describing the error.
+
+- **Example:**
+
+    - **Successful Response:**
+      ```json
+      {
+        "timestamp": "2023-10-27T10:00:01Z",
+        "status_code": 200,
+        "latency": {
+          "queue": 2,
+          "dns": 10,
+          "connect": 50,
+          "tls": 100,
+          "send_first_byte": 1,
+          "send_last_byte": 4,
+          "receive_first_byte": 195,
+          "total": 362
+        },
+        "flow": {
+          "source_ip": "192.168.1.100",
+          "source_port": 51234,
+          "destination_ip": "93.184.216.34",
+          "destination_port": 443
+        }
+      }
+      ```
+
+    - **Failed Response:**
+      ```json
+      {
+        "timestamp": "2023-10-27T10:00:02Z",
+        "failure_phase": "DNS",
+        "error_message": "Host not found"
+      }
+      ```
 
 ### Test
 
-A `Test` represents a collection of requests and their corresponding responses for a specific scenario.
+A `Test` represents a scenario for sending a specific request multiple times and collecting its responses.
 
 - **Attributes:**
-    - `test_id`: A unique identifier for the test.
-    - `name`: A descriptive name for the test.
-    - `description`: A more detailed description of the test's purpose.
-    - `requests`: A list of `Request` objects.
+    - `request`: The `Request` object to be sent.
     - `responses`: A list of `Response` objects.
-    - `creation_date`: The date and time the test was created.
 
 ## Value-Added Objects
 
@@ -51,27 +84,55 @@ A `URL` represents a Uniform Resource Locator.
     - `path`: The path of the resource.
     - `query_params`: A dictionary of query parameters.
 
+### Flow
+
+A `Flow` object contains the network flow information for a request.
+
+- **Attributes:**
+    - `source_ip`: The source IP address of the request.
+    - `source_port`: The source port of the request.
+    - `destination_ip`: The destination IP address of the request.
+    - `destination_port`: The destination port of the request.
+
+### Latency
+
+A `Latency` object holds detailed timing information for a successful request, broken down into phases.
+
+- **Attributes:**
+    - `queue`: Time spent in the queue before the request was sent (in milliseconds).
+    - `dns`: Time spent in DNS lookup (in milliseconds).
+    - `connect`: Time spent connecting to the server (in milliseconds).
+    - `tls`: Time spent performing the TLS handshake (in milliseconds).
+    - `send_first_byte`: Time taken to send the first byte of the request (in milliseconds).
+    - `send_last_byte`: Time taken from sending the first byte to sending the last byte of the request (in milliseconds).
+    - `receive_first_byte`: Time spent waiting for the first byte of the response (in milliseconds).
+    - `total`: Total time for the request (in milliseconds).
+
 ### LatencyReport
 
-A `LatencyReport` provides aggregated latency data for a `TestRun`.
+A `LatencyReport` provides aggregated latency data for a `Test`, with a breakdown for each phase.
 
 - **Attributes:**
-    - `test_run_id`: The ID of the `TestRun` this report is for.
-    - `min_latency`: The minimum latency observed.
-    - `max_latency`: The maximum latency observed.
-    - `average_latency`: The average latency.
-    - `p95_latency`: The 95th percentile latency.
-    - `p99_latency`: The 99th percentile latency.
+    - `queue`: A `LatencyStatistics` object for the time spent in queue.
+    - `dns`: A `LatencyStatistics` object for the DNS lookup phase.
+    - `connect`: A `LatencyStatistics` object for the connection phase.
+    - `tls`: A `LatencyStatistics` object for the TLS handshake phase.
+    - `send_first_byte`: A `LatencyStatistics` object for the time to send the first byte.
+    - `send_last_byte`: A `LatencyStatistics` object for the time to send the last byte.
+    - `receive_first_byte`: A `LatencyStatistics` object for the time to receive the first byte.
+    - `total`: A `LatencyStatistics` object for the total request time.
 
-### TestRun
+### LatencyStatistics
 
-A `TestRun` represents a single execution of a `Test`.
+A `LatencyStatistics` object holds aggregated data for a single latency metric.
 
 - **Attributes:**
-    - `test_run_id`: A unique identifier for the test run.
-    - `test_id`: The ID of the `Test` that was run.
-    - `timestamp`: The time at which the test run was initiated.
-    - `responses`: A collection of `Response` objects from the run.
+    - `min`: The minimum value observed (in milliseconds).
+    - `max`: The maximum value observed (in milliseconds).
+    - `average`: The average value (in milliseconds).
+    - `p90`: The 90th percentile value (in milliseconds).
+    - `p95`: The 95th percentile value (in milliseconds).
+    - `p99`: The 99th percentile value (in milliseconds).
 
 ## Domain Services
 
@@ -81,8 +142,8 @@ This service is responsible for executing a `Test`. It takes a `Test` object, se
 
 ### LatencyAnalysisService
 
-This service takes a `TestRun` and generates a `LatencyReport`. It encapsulates the logic for calculating latency statistics.
+This service takes a `Test` and generates a `LatencyReport`. It encapsulates the logic for calculating latency statistics.
 
-### TestRepository
+### TestOutputPersistenceService
 
-This service handles the persistence of `Test` objects. It provides methods to create, retrieve, update, and delete tests from a data store.
+This service is responsible for saving the output of a test. It handles persisting the `Test` object, which includes the raw `Response` data.
