@@ -10,10 +10,10 @@ A `Request` represents an HTTP request to be sent to a target service.
 
 - **Attributes:**
     - `url`: A `URL` object representing the target service's endpoint.
-    - `method`: The HTTP method (e.g., GET, POST, PUT, DELETE).
+    - `method`: An `HTTPMethod` object representing the HTTP method.
     - `headers`: A dictionary of HTTP headers.
     - `body`: The request payload.
-    - `timeout`: The timeout for the request in seconds.
+    - `timeout`: The timeout for the request in seconds (default: 10).
 
 ### Response
 
@@ -33,7 +33,6 @@ A `Response` represents the outcome of an HTTP request, which can be either a su
     - **Successful Response:**
       ```json
       {
-        "timestamp": "2023-10-27T10:00:01Z",
         "status_code": 200,
         "latency": {
           "queue": 2,
@@ -57,7 +56,6 @@ A `Response` represents the outcome of an HTTP request, which can be either a su
     - **Failed Response:**
       ```json
       {
-        "timestamp": "2023-10-27T10:00:02Z",
         "failure_phase": "DNS",
         "error_message": "Host not found"
       }
@@ -83,6 +81,18 @@ A `URL` represents a Uniform Resource Locator.
     - `port`: The port number.
     - `path`: The path of the resource.
     - `query_params`: A dictionary of query parameters.
+
+### HTTPMethod
+
+An `HTTPMethod` is an enumeration of supported HTTP methods.
+
+- **Values:** `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`.
+
+### FailurePhase
+
+A `FailurePhase` is an enumeration of the possible stages at which a request can fail.
+
+- **Values:** `DNS`, `TCP Connection`, `TLS Handshake`, `Request`, `Response`.
 
 ### Flow
 
