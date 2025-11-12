@@ -148,16 +148,3 @@ A `LatencyStatistics` object holds aggregated data for a single latency metric.
     - `p95`: The 95th percentile value (in milliseconds).
     - `p99`: The 99th percentile value (in milliseconds).
 
-## Domain Services
-
-### TestRunnerService
-
-This service is responsible for executing a `Test`. It takes a `Test` object, sends the defined HTTP requests, and records the `Response` objects.
-
-### LatencyAnalysisService
-
-This service takes a `Test` and generates a `LatencyReport`. It encapsulates the logic for calculating latency statistics.
-
-### TestOutputPersistenceService
-
-This service is responsible for saving the output of a test. It handles persisting the `Test` object, which includes the raw `Response` data.
