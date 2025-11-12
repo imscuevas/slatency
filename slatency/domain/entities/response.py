@@ -1,9 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
+from uuid import UUID, uuid4
 
+from slatency.domain.value_objects.failure_phase import FailurePhase
 from slatency.domain.value_objects.flow import Flow
 from slatency.domain.value_objects.latency import Latency
-from slatency.domain.value_objects.failure_phase import FailurePhase
+
 
 @dataclass
 class SuccessfulResponse:
@@ -13,6 +15,8 @@ class SuccessfulResponse:
     status_code: int
     latency: Latency
     flow: Flow
+    response_id: UUID = field(default_factory=uuid4)
+
 
 @dataclass
 class FailedResponse:
@@ -21,5 +25,7 @@ class FailedResponse:
     """
     failure_phase: FailurePhase
     error_message: str
+    response_id: UUID = field(default_factory=uuid4)
+
 
 Response = Union[SuccessfulResponse, FailedResponse]

@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class Latency:
     """
-    A Latency object holds detailed timing information for a successful request,
-    broken down into phases.
+    A value object holding detailed timing information for a successful request.
+    All values are in milliseconds.
     """
     queue: int
     dns: int

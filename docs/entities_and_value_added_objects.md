@@ -9,6 +9,7 @@ This document outlines the core entities and value-added objects for the slatenc
 A `Request` represents an HTTP request to be sent to a target service.
 
 - **Attributes:**
+    - `request_id`: A unique identifier for the request.
     - `url`: A `URL` object representing the target service's endpoint.
     - `method`: An `HTTPMethod` object representing the HTTP method.
     - `headers`: A dictionary of HTTP headers.
@@ -20,6 +21,7 @@ A `Request` represents an HTTP request to be sent to a target service.
 A `Response` represents the outcome of an HTTP request, which can be either a success or a failure.
 
 - **Attributes:**
+    - `response_id`: A unique identifier for the response.
     - **For successful responses:**
         - `status_code`: The HTTP status code.
         - `latency`: A `Latency` object containing detailed timing information.
@@ -66,7 +68,9 @@ A `Response` represents the outcome of an HTTP request, which can be either a su
 A `Test` represents a scenario for sending a specific request multiple times and collecting its responses.
 
 - **Attributes:**
+    - `test_id`: A unique identifier for the test.
     - `request`: The `Request` object to be sent.
+    - `expected_responses`: The number of times the request should be sent.
     - `responses`: A list of `Response` objects.
 
 ## Value-Added Objects
@@ -76,9 +80,9 @@ A `Test` represents a scenario for sending a specific request multiple times and
 A `URL` represents a Uniform Resource Locator.
 
 - **Attributes:**
-    - `protocol`: The protocol (e.g., http, https).
+    - `protocol`: The protocol (must be `http` or `https`).
     - `host`: The hostname or IP address.
-    - `port`: The port number.
+    - `port`: The port number (must be between 0 and 65535).
     - `path`: The path of the resource.
     - `query_params`: A dictionary of query parameters.
 

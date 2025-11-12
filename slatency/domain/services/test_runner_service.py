@@ -8,8 +8,8 @@ class TestRunnerService(Protocol):
     It takes a Test object, sends the defined HTTP requests,
     and records the Response objects.
     """
-    def execute(self, test: Test, number_of_runs: int) -> Test:
+    def execute(self, test: Test) -> Test:
         """
-        Executes the test for a given number of runs.
+        Executes the test based on its `expected_responses` attribute.
         """
         ...
