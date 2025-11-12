@@ -1,121 +1,91 @@
-# Application Layer
+# Slatency - Application Layer
 
-## The `Result` type
+This document outlines the Application Business Rules (Interactors/Use Cases) for the `slatency` project. This layer orchestrates the domain entities and value objects to perform specific application tasks.
 
-To handle operations that can either succeed or fail, we will use a `Result` type. This is a generic class that will represent either a `Success` or a `Failure`.
+## Core Concepts
 
-### `Result[S, E]`
+### Result Pattern
 
-- **Type parameters:**
-    - `S`: The type of the value on success.
-    - `E`: The type of the error on failure.
+All interactor methods (use cases) MUST return a `Result` object. This provides a standardized way to handle both success and failure scenarios without relying on exceptions for control flow.
 
-The `Result` will have two possible states:
+- **`Result[S, E]`**: A generic container that holds either a success value (`S`) or an error value (`E`).
+- **`Success(value: S)`**: Represents a successful operation, containing the resulting data.
+- **`Failure(error: E)`**: Represents a failed operation, containing an error object.
 
-- `Success(S)`: Contains the successful result of the operation.
-- `Failure(E)`: Contains an error object describing what went wrong.
+### Application Error Hierarchy
 
-### Example Usage
+All errors returned by interactors will be subtypes of a base `AppError`.
 
-```python
-from typing import Union
+- **`AppError`**: The base class for all application-level errors.
+  - **`ValidationError(message: str, field: str)`**: Used when input data fails validation (e.g., invalid URL format, negative probe count).
+  - **`InfrastructureError(message: str, underlying_error: Exception)`**: Used for failures in external systems like the network, filesystem, or external APIs (e.g., a `pycurl` connection error).
+  - **`NotFoundError(message: str, resource_id: str)`**: Used when a requested resource (like a test result file) cannot be found.
 
-class Success[S, E]:
-    def __init__(self, value: S):
-        self.value = value
+---
 
-class Failure[S, E]:
-    def __init__(self, error: E):
-        self.error = error
+## Interactors (Application Services)
 
-Result = Union[Success[S, E], Failure[S, E]]
+### 1. TestApplicationService
 
-# Example of a function that returns a Result
-def divide(a: int, b: int) -> Result[float, str]:
-    if b == 0:
-        return Failure("Cannot divide by zero")
-    return Success(a / b)
+*   **Purpose:** Executes a new latency test against a specified endpoint. It orchestrates the creation of a `Test` object, runs the HTTP requests via an external service, and returns the completed `Test` with all its `Response` objects.
 
-# Usage
-result = divide(10, 2)
-if isinstance(result, Success):
-    print(f"Result: {result.value}")
-else:
-    print(f"Error: {result.error}")
-```
+*   **Input DTO (Request): `NewTestRequestDTO`**
+    *   `url: str`: The target URL for the test.
+    *   `method: str`: The HTTP method (e.g., 'GET', 'POST').
+    *   `headers: dict[str, str] | None`: Optional HTTP headers.
+    *   `body: str | None`: Optional request body.
+    *   `probes: int`: The number of requests to send.
+    *   `connect_timeout: int`: Connection timeout in seconds.
+    *   `total_timeout: int`: Total request timeout in seconds.
 
-## Error Hierarchy
+*   **Output DTO (Success Response): `TestResultDTO`**
+    *   `test_id: str`: The unique identifier for the test.
+    *   `request: dict`: A dictionary representing the `Request` entity used for the test.
+    *   `responses: list[dict]`: A list of dictionaries, where each represents a `Response` entity (either successful or failed).
 
-To provide clear and structured error handling, we will define a hierarchy of error types.
+*   **Ports (Dependencies):**
+    *   `ITestRunnerService`: An interface to a domain service responsible for executing the HTTP requests for a given `Test` object and returning the collected `Response` objects. This abstracts away the `pycurl` implementation details.
 
-### `AppError`
+*   **Method Signature:**
+    `execute_test(dto: NewTestRequestDTO) -> Result[TestResultDTO, AppError]`
 
-This is the base class for all application-specific errors.
+### 2. LatencyAnalysisApplicationService
 
-- **Attributes:**
-    - `message`: A human-readable error message.
+*   **Purpose:** Analyzes the results of a completed test to generate a statistical latency report. It takes the raw response data from a `Test` and calculates aggregate metrics.
 
-```python
-class AppError(Exception):
-    def __init__(self, message: str):
-        self.message = message
-```
+*   **Input DTO (Request): `LatencyAnalysisRequestDTO`**
+    *   `test_result: TestResultDTO`: The complete result of a test, as produced by the `TestApplicationService`.
 
-### `ValidationError`
+*   **Output DTO (Success Response): `LatencyReportDTO`**
+    *   This DTO directly mirrors the `LatencyReport` value object from the domain layer.
+    *   `total_requests: int`: The total number of probes in the test.
+    *   `successful_requests: int`: The count of successful requests.
+    *   `failed_requests: int`: The count of failed requests.
+    *   `error_rate_percentage: float`: The overall error rate.
+    *   `errors_by_phase: dict[str, int]`: A breakdown of failure counts by `FailurePhase` (e.g., `{"DNS": 5, "TCP Connection": 2}`).
+    *   `latency_statistics: dict[str, dict]`: A dictionary where keys are latency phases (`dns`, `connect`, `total`, etc.) and values are dictionaries representing the `LatencyStatistics` value object (`min`, `max`, `average`, `p90`, `p95`, `p99`).
 
-This error is used when input data fails validation.
+*   **Ports (Dependencies):**
+    *   `ILatencyAnalysisService`: An interface to a domain service that takes a `Test` object and is responsible for the business logic of calculating the `LatencyReport`.
 
-- **Inherits from:** `AppError`
-- **Attributes:**
-    - `field_errors`: A dictionary mapping field names to a list of validation error messages.
+*   **Method Signature:**
+    `analyze_latency(dto: LatencyAnalysisRequestDTO) -> Result[LatencyReportDTO, AppError]`
 
-```python
-from typing import Dict, List
+### 3. TestOutputPersistenceApplicationService
 
-class ValidationError(AppError):
-    def __init__(self, message: str, field_errors: Dict[str, List[str]]):
-        super().__init__(message)
-        self.field_errors = field_errors
-```
+*   **Purpose:** Persists the raw results of a latency test to a specified output, such as a JSON file. This decouples the core application logic from the details of file I/O.
 
-### `InfrastructureError`
+*   **Input DTO (Request): `TestPersistenceRequestDTO`**
+    *   `test_result: TestResultDTO`: The complete result of a test to be saved.
+    *   `output_path: str`: The file path where the results should be saved.
+    *   `format: str`: The desired output format (e.g., 'json').
 
-This error is used for failures in external systems, such as network issues or database connection errors.
+*   **Output DTO (Success Response): `PersistenceSuccessDTO`**
+    *   `output_path: str`: The final path where the file was saved.
+    *   `bytes_written: int`: The number of bytes written to the file.
 
-- **Inherits from:** `AppError`
-- **Attributes:**
-    - `original_exception`: The original exception that was caught.
+*   **Ports (Dependencies):**
+    *   `ITestOutputPersistenceService`: An interface to a domain service responsible for serializing and writing the test data to a persistent medium. This abstracts away the `json.dump` and `open()` calls.
 
-```python
-class InfrastructureError(AppError):
-    def __init__(self, message: str, original_exception: Exception):
-        super().__init__(message)
-        self.original_exception = original_exception
-```
-
-### `DomainError`
-
-This error is used when a domain rule is violated.
-
-- **Inherits from:** `AppError`
-
-```python
-class DomainError(AppError):
-    pass
-```
-
-## Application Services
-
-Application services orchestrate the domain logic and are the entry points for the application's use cases.
-
-### TestApplicationService
-
-This service is responsible for executing a `Test`. It takes a `Test` object, sends the defined HTTP requests, and records the `Response` objects.
-
-### LatencyAnalysisApplicationService
-
-This service takes a `Test` and generates a `LatencyReport`. It encapsulates the logic for calculating latency statistics.
-
-### TestOutputPersistenceApplicationService
-
-This service is responsible for saving the output of a test. It handles persisting the `Test` object, which includes the raw `Response` data.
+*   **Method Signature:**
+    `save_results(dto: TestPersistenceRequestDTO) -> Result[PersistenceSuccessDTO, AppError]`
